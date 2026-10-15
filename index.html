@@ -4,12 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pantau SPBU Realtime Bali - Live Overpass API & Google Traffic</title>
-    <!-- Tailwind CSS Production Build (Mencegah Warning Console) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+    <!-- Tailwind CSS v3 JIT Engine (Desain Asli Slate & Bali Extended Theme) -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        bali: {
+                            red: '#e11d48',
+                            gold: '#f59e0b',
+                            dark: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -468,17 +487,17 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        // URUTAN OVERPASS ENDPOINTS LEBIH RESILIEN UNTUK MENCEGAH 504 GATEWAY TIMEOUT
+        // SERVER OVERPASS MULTI-MIRROR
         const OVERPASS_ENDPOINTS = [
+            "https://overpass-api.de/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter",
-            "https://overpass.private.coffee/api/interpreter",
-            "https://overpass-api.de/api/interpreter"
+            "https://overpass.private.coffee/api/interpreter"
         ];
 
-        // OVERPASS QL QUERY FOR BALI BOUNDING BOX [-8.95, 114.43, -8.05, 115.75]
+        // QUERY BOUNDING BOX BALI
         const OVERPASS_QUERY = `[out:json][timeout:15];(node["amenity"="fuel"](-8.95,114.43,-8.05,115.75);way["amenity"="fuel"](-8.95,114.43,-8.05,115.75););out center;`;
 
-        // FALLBACK BACKUP DATASET BALI SPBU
+        // FALLBACK DATASET JIKA OVERPASS SIBUK
         const staticFallbackSPBU = [
             { id: "spbu-osm-1", code: "SPBU 54.811.01", name: "SPBU Pertamina Singaraja Ahmad Yani", lat: -8.1170, lng: 115.0880, district: "Buleleng", address: "Jl. Ahmad Yani, Singaraja, Buleleng, Bali", status: "parah", waitTime: 20, queueMeters: 30, updatedAt: Date.now() - 300000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
             { id: "spbu-osm-2", code: "SPBU 54.811.04", name: "SPBU Pertamina Seririt", lat: -8.1920, lng: 114.9350, district: "Buleleng", address: "Jl. Raya Seririt-Singaraja, Buleleng, Bali", status: "lancar", waitTime: 5, queueMeters: 10, updatedAt: Date.now() - 120000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
@@ -486,7 +505,6 @@
             { id: "spbu-osm-4", code: "SPBU 54.801.38", name: "SPBU Pertamina Raya Canggu", lat: -8.6472, lng: 115.1438, district: "Badung", address: "Jl. Raya Canggu, Kuta Utara, Badung, Bali", status: "parah", waitTime: 35, queueMeters: 280, updatedAt: Date.now() - 900000, fuels: { pertalite: "menipis", pertamax: "tersedia", solar: "habis", dexlite: "tersedia" } }
         ];
 
-        // GLOBAL APPLICATION STATE
         let spbuList = [];
         let userReports = [];
         let activeSpbuId = null;
@@ -494,19 +512,18 @@
         let activeFuelFilter = "ALL";
         let searchKeyword = "";
 
-        // TERISOLASI AGAR TIDAK BENTROK DATA DI VERCEL
-        const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_STATIC_V12";
+        // KEY PERSISTENSI VERCEL
+        const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_STATIC_V14";
 
-        // INITIALIZATION
         window.addEventListener("DOMContentLoaded", () => {
             loadUserReports();
             setupSearchListeners();
             fetchOverpassData();
         });
 
-        // HELPER TIMEOUT PER REQUEST
+        // FETCH RESILIEN TANPA MEMICU CONSOLE WARN
         async function fetchWithTimeout(resource, options = {}) {
-            const { timeout = 5000 } = options;
+            const { timeout = 8000 } = options;
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeout);
             try {
@@ -522,7 +539,6 @@
             }
         }
 
-        // FETCH ALL SPBUs IN BALI VIA OVERPASS API WITH MIRROR FALLBACKS
         async function fetchOverpassData(isManualRefresh = false) {
             const overlay = document.getElementById("loadingOverlay");
             const icon = document.getElementById("reloadIcon");
@@ -539,7 +555,7 @@
                         method: "POST",
                         headers: { "Content-Type": "application/x-www-form-urlencoded" },
                         body: "data=" + encodeURIComponent(OVERPASS_QUERY),
-                        timeout: 5000
+                        timeout: 8000
                     });
 
                     if (response.ok) {
@@ -550,7 +566,7 @@
                         }
                     }
                 } catch (err) {
-                    console.warn(`Overpass endpoint ${endpoint} failed/timeout, trying next mirror...`);
+                    // Pindah mirror secara hening tanpa log console warning
                 }
             }
 
@@ -574,18 +590,12 @@
             renderAll();
         }
 
-        // PARSE RAW OVERPASS OSM ELEMENTS
         function parseOverpassElements(elements) {
             const parsed = [];
 
             elements.forEach((el, index) => {
-                let lat = el.lat;
-                let lng = el.lon;
-
-                if (!lat && el.center) {
-                    lat = el.center.lat;
-                    lng = el.center.lon;
-                }
+                let lat = el.lat || (el.center ? el.center.lat : null);
+                let lng = el.lon || (el.center ? el.center.lon : null);
 
                 if (!lat || !lng) return;
 
@@ -630,11 +640,10 @@
             return parsed;
         }
 
-        // DETEKSI KABUPATEN DENGAN DUKUNGAN BULELENG PERSISI
         function detectBaliRegency(lat, lng, tags = {}) {
             const text = JSON.stringify(tags).toLowerCase();
 
-            // Buleleng Keywords
+            // Katakunci khusus Buleleng
             if (text.includes("buleleng") || text.includes("singaraja") || text.includes("seririt") || text.includes("gerokgak") || text.includes("sawan") || text.includes("sukasada") || text.includes("banjar") || text.includes("kubutambahan") || text.includes("tejakula")) return "Buleleng";
             if (text.includes("denpasar")) return "Denpasar";
             if (text.includes("badung") || text.includes("kuta") || text.includes("canggu") || text.includes("jimbaran") || text.includes("nusa dua") || text.includes("mengwi") || text.includes("sempidi")) return "Badung";
@@ -645,8 +654,8 @@
             if (text.includes("klungkung") || text.includes("semarapura") || text.includes("penida")) return "Klungkung";
             if (text.includes("bangli") || text.includes("kintamani")) return "Bangli";
 
-            // Geo Approximations
-            if (lat > -8.28) return "Buleleng"; // Wilayah Bali Utara = Buleleng
+            // Geografis Lintang & Bujur
+            if (lat > -8.28) return "Buleleng";
             if (lng < 114.85) return "Jembrana";
             if (lng > 115.48) return "Karangasem";
             if (lat < -8.68 && lng > 115.15 && lng < 115.28) return "Denpasar";
@@ -659,7 +668,7 @@
             return "Badung";
         }
 
-        // KETENTUAN KEMACETAN: ANTREAN > 25 METER OTOMATIS MACET PARAH
+        // KETENTUAN KEMACETAN: ANTREAN > 25 METER OTOMATIS PARAH
         function getStatusFromQueue(queueMeters) {
             if (queueMeters > 25) return "parah";
             if (queueMeters > 15) return "macet";
