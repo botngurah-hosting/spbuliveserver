@@ -7,7 +7,7 @@
       Pantau SPBU Realtime Bali - Live Overpass API & Google Traffic
     </title>
 
-    <!-- Favicon SVG untuk mencegah error 404 favicon.ico -->
+    <!-- Favicon SVG bawaan untuk mencegah error 404 favicon.ico -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛽</text></svg>">
 
     <!-- Filter Konsol khusus untuk menyaring warning produksi Tailwind CDN -->
@@ -162,7 +162,7 @@
       </div>
     </header>
 
-    <!-- NOTIFIKASI INFORMASI PEMBANDING BANNER -->
+    <!-- NOTIFIKASI INFORMASI BANNER -->
     <div
       class="bg-blue-950/90 border-b border-blue-800/80 px-4 py-2 text-xs text-blue-200 z-20 shrink-0"
     >
@@ -568,8 +568,7 @@
       </div>
       <h2 class="text-lg font-bold">Mengambil Seluruh SPBU se-Bali...</h2>
       <p id="loadingSubtext" class="text-xs text-slate-400 max-w-sm mt-1">
-        Mengakses API OpenStreetMap (Overpass API) untuk mendeteksi semua titik
-        SPBU di Bali.
+        Mengakses API OpenStreetMap untuk mendeteksi seluruh titik SPBU Bali.
       </p>
 
       <div class="w-48 bg-slate-800 rounded-full h-1.5 mt-4 overflow-hidden">
@@ -834,12 +833,11 @@
       const OVERPASS_QUERY = `[out:json][timeout:25];(node["amenity"="fuel"](-8.95,114.43,-8.05,115.75);way["amenity"="fuel"](-8.95,114.43,-8.05,115.75););out center;`;
       const encodedQuery = encodeURIComponent(OVERPASS_QUERY);
 
-      // DAFTAR ENDPOINT TANGGUH BEBAS DARI ERROR 406 DAN CORS
+      // PRIORITAS UTAMA: Memanggil Serverless Function /api/overpass
       const OVERPASS_ENDPOINTS = [
-        `https://overpass-api.de/api/interpreter?data=${encodedQuery}`,
+        "/api/overpass",
         `https://overpass.kumi.systems/api/interpreter?data=${encodedQuery}`,
-        `https://overpass.private.coffee/api/interpreter?data=${encodedQuery}`,
-        `https://corsproxy.io/?${encodeURIComponent("https://overpass-api.de/api/interpreter?data=" + encodedQuery)}`
+        `https://overpass.private.coffee/api/interpreter?data=${encodedQuery}`
       ];
 
       const staticFallbackSPBU = [
@@ -928,7 +926,7 @@
       let activeFuelFilter = "ALL";
       let searchKeyword = "";
 
-      const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_LIVE_V17";
+      const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_LIVE_V18";
 
       window.addEventListener("DOMContentLoaded", () => {
         loadUserReports();
@@ -936,9 +934,8 @@
         fetchOverpassData();
       });
 
-      // MENGHINDARI HEADER 'ACCEPT' KHUSUS AGAR OVERPASS API TIDAK MENOLAK DENGAN HTTP 406
       async function fetchWithTimeout(resource, options = {}) {
-        const { timeout = 8000 } = options;
+        const { timeout = 10000 } = options;
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
         try {
@@ -970,7 +967,6 @@
 
             const response = await fetchWithTimeout(targetUrl, {
               method: "GET",
-              timeout: 8000,
             });
 
             if (response.ok) {
@@ -981,7 +977,7 @@
               }
             }
           } catch (err) {
-            // Berpindah otomatis ke endpoint/mirror berikutnya
+            // Lanjut ke endpoint berikutnya jika gagal
           }
         }
 
@@ -994,7 +990,7 @@
         } else {
           spbuList = [...staticFallbackSPBU];
           showToast(
-            "Overpass API sibuk. Memuat data cadangan SPBU Bali.",
+            "Overpass API sedang sibuk. Memuat data cadangan SPBU Bali.",
             "info",
           );
         }
