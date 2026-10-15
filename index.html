@@ -4,7 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pantau SPBU Realtime Bali - Live Overpass API & Google Traffic</title>
-    <!-- Tailwind CSS v3 JIT Engine (Desain Asli Slate & Bali Extended Theme) -->
+    
+    <!-- Filter Konsol khusus untuk menyaring warning produksi Tailwind CDN -->
+    <script>
+        (function() {
+            const originalWarn = console.warn;
+            console.warn = function(...args) {
+                if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) {
+                    return;
+                }
+                originalWarn.apply(console, args);
+            };
+        })();
+    </script>
+
+    <!-- Tailwind CSS v3 Engine (Mempertahankan Warna Slate & Tema Asli) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -487,17 +501,17 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        // SERVER OVERPASS MULTI-MIRROR
+        // DAFTAR ENDPOINT OVERPASS DENGAN METODE GET UNTUK BEBAS CORS & 406 ERROR
         const OVERPASS_ENDPOINTS = [
             "https://overpass-api.de/api/interpreter",
             "https://overpass.kumi.systems/api/interpreter",
             "https://overpass.private.coffee/api/interpreter"
         ];
 
-        // QUERY BOUNDING BOX BALI
+        // QUERY SPBU SE-BALI
         const OVERPASS_QUERY = `[out:json][timeout:15];(node["amenity"="fuel"](-8.95,114.43,-8.05,115.75);way["amenity"="fuel"](-8.95,114.43,-8.05,115.75););out center;`;
 
-        // FALLBACK DATASET JIKA OVERPASS SIBUK
+        // DATA CADANGAN LOKAL APABILA OVERPASS SEDANG SIBUK
         const staticFallbackSPBU = [
             { id: "spbu-osm-1", code: "SPBU 54.811.01", name: "SPBU Pertamina Singaraja Ahmad Yani", lat: -8.1170, lng: 115.0880, district: "Buleleng", address: "Jl. Ahmad Yani, Singaraja, Buleleng, Bali", status: "parah", waitTime: 20, queueMeters: 30, updatedAt: Date.now() - 300000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
             { id: "spbu-osm-2", code: "SPBU 54.811.04", name: "SPBU Pertamina Seririt", lat: -8.1920, lng: 114.9350, district: "Buleleng", address: "Jl. Raya Seririt-Singaraja, Buleleng, Bali", status: "lancar", waitTime: 5, queueMeters: 10, updatedAt: Date.now() - 120000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
@@ -512,8 +526,7 @@
         let activeFuelFilter = "ALL";
         let searchKeyword = "";
 
-        // KEY PERSISTENSI VERCEL
-        const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_STATIC_V14";
+        const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_LIVE_V15";
 
         window.addEventListener("DOMContentLoaded", () => {
             loadUserReports();
@@ -521,7 +534,7 @@
             fetchOverpassData();
         });
 
-        // FETCH RESILIEN TANPA MEMICU CONSOLE WARN
+        // HELPER FETCH TIMEOUT DENGAN ABORTCONTROLLER
         async function fetchWithTimeout(resource, options = {}) {
             const { timeout = 8000 } = options;
             const controller = new AbortController();
@@ -539,22 +552,25 @@
             }
         }
 
+        // FETCH OVERPASS DATA MENGGUNAKAN METODE GET (MENCEGAH HTTP 406 DAN BLOKIR CORS)
         async function fetchOverpassData(isManualRefresh = false) {
             const overlay = document.getElementById("loadingOverlay");
             const icon = document.getElementById("reloadIcon");
             
-            overlay.classList.remove("hidden");
+            if (overlay) overlay.classList.remove("hidden");
             if (icon) icon.classList.add("fa-spin");
 
             let rawElements = null;
 
             for (const endpoint of OVERPASS_ENDPOINTS) {
                 try {
-                    document.getElementById("loadingSubtext").innerText = `Mengakses Overpass OSM (${new URL(endpoint).hostname})...`;
-                    const response = await fetchWithTimeout(endpoint, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                        body: "data=" + encodeURIComponent(OVERPASS_QUERY),
+                    const subtext = document.getElementById("loadingSubtext");
+                    if (subtext) subtext.innerText = `Mengakses Overpass OSM (${new URL(endpoint).hostname})...`;
+
+                    // Panggilan GET bebas hambatan CORS
+                    const getUrl = `${endpoint}?data=${encodeURIComponent(OVERPASS_QUERY)}`;
+                    const response = await fetchWithTimeout(getUrl, {
+                        method: "GET",
                         timeout: 8000
                     });
 
@@ -566,7 +582,7 @@
                         }
                     }
                 } catch (err) {
-                    // Pindah mirror secara hening tanpa log console warning
+                    // Berpindah ke mirror berikutnya secara mulus
                 }
             }
 
@@ -584,7 +600,7 @@
                 activeSpbuId = spbuList[0].id;
             }
 
-            overlay.classList.add("hidden");
+            if (overlay) overlay.classList.add("hidden");
             if (icon) icon.classList.remove("fa-spin");
 
             renderAll();
@@ -643,7 +659,6 @@
         function detectBaliRegency(lat, lng, tags = {}) {
             const text = JSON.stringify(tags).toLowerCase();
 
-            // Katakunci khusus Buleleng
             if (text.includes("buleleng") || text.includes("singaraja") || text.includes("seririt") || text.includes("gerokgak") || text.includes("sawan") || text.includes("sukasada") || text.includes("banjar") || text.includes("kubutambahan") || text.includes("tejakula")) return "Buleleng";
             if (text.includes("denpasar")) return "Denpasar";
             if (text.includes("badung") || text.includes("kuta") || text.includes("canggu") || text.includes("jimbaran") || text.includes("nusa dua") || text.includes("mengwi") || text.includes("sempidi")) return "Badung";
@@ -654,7 +669,6 @@
             if (text.includes("klungkung") || text.includes("semarapura") || text.includes("penida")) return "Klungkung";
             if (text.includes("bangli") || text.includes("kintamani")) return "Bangli";
 
-            // Geografis Lintang & Bujur
             if (lat > -8.28) return "Buleleng";
             if (lng < 114.85) return "Jembrana";
             if (lng > 115.48) return "Karangasem";
@@ -668,7 +682,7 @@
             return "Badung";
         }
 
-        // KETENTUAN KEMACETAN: ANTREAN > 25 METER OTOMATIS PARAH
+        // KETENTUAN ANTREAN: > 25 METER OTOMATIS MACET PARAH
         function getStatusFromQueue(queueMeters) {
             if (queueMeters > 25) return "parah";
             if (queueMeters > 15) return "macet";
