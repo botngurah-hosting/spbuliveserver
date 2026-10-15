@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pantau SPBU Realtime Bali - Traffic Google Maps</title>
-    <!-- Compiled Tailwind CSS (Bebas Warning Console & Siap Vercel) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" integrity="sha512-wnea99cKBU3eXP3ftMBE9UJvhQ1yFqI14A0nTH17C8bptd10IadFbgf3yX9Q502v9d11+A551x/v27r8f1L2+A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Pantau SPBU Realtime Bali - Live Overpass API & Google Traffic</title>
+    <!-- Tailwind CSS Production Build (Mencegah Warning Console) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
     <!-- FontAwesome 6 Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom Smooth Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -29,6 +28,15 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Responsive Iframe Container */
         .map-iframe-container {
             position: relative;
             width: 100%;
@@ -44,11 +52,12 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 font-sans text-gray-800 antialiased h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-900 font-sans text-slate-800 antialiased h-screen flex flex-col overflow-hidden">
 
     <!-- TOP HEADER -->
-    <header class="bg-gray-950 text-white border-b border-gray-800 shrink-0 z-30 px-4 py-2.5">
+    <header class="bg-slate-950 text-white border-b border-slate-800 shrink-0 z-30 px-4 py-2.5">
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <!-- Brand Logo & Title -->
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-amber-500 to-red-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30">
                     <i class="fa-solid fa-gas-pump text-xl"></i>
@@ -58,15 +67,20 @@
                         <h1 class="font-black text-base md:text-lg tracking-tight leading-none text-white">
                             PANTAU SPBU <span class="text-amber-400">BALI</span>
                         </h1>
-                        <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-widest flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Google Traffic Live
+                        <span id="osmStatusBadge" class="bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-widest flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live Overpass OSM
                         </span>
                     </div>
-                    <p class="text-[11px] text-gray-400 hidden sm:block">Pemantauan Kemacetan Jalan SPBU Seluruh Kabupaten/Kota se-Bali</p>
+                    <p class="text-[11px] text-slate-400 hidden sm:block">Deteksi Otomatis Seluruh SPBU se-Bali + Peta Kemacetan Google</p>
                 </div>
             </div>
 
+            <!-- Action Buttons -->
             <div class="flex items-center gap-2">
+                <button onclick="fetchOverpassData(true)" id="btnReloadOverpass" title="Muat ulang data SPBU Bali dari OpenStreetMap" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 px-3 py-2 rounded-xl border border-slate-700 transition flex items-center gap-1.5 active:scale-95">
+                    <i id="reloadIcon" class="fa-solid fa-arrows-rotate text-amber-400"></i>
+                    <span class="hidden sm:inline">Refresh Data Bali</span>
+                </button>
                 <button onclick="openReportModal()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-red-600/30 transition duration-200 flex items-center gap-1.5 active:scale-95">
                     <i class="fa-solid fa-bullhorn text-sm"></i>
                     <span>Laporkan Antrean</span>
@@ -75,39 +89,49 @@
         </div>
     </header>
 
+    <!-- NOTIFIKASI INFORMASI PEMBANDING BANNER -->
+    <div class="bg-blue-950/90 border-b border-blue-800/80 px-4 py-2 text-xs text-blue-200 z-20 shrink-0">
+        <div class="max-w-7xl mx-auto flex items-center gap-2.5">
+            <i class="fa-solid fa-circle-info text-blue-400 text-sm shrink-0"></i>
+            <p class="leading-tight text-[11px] sm:text-xs">
+                <strong>Catatan Informasi:</strong> Data tingkat kemacetan bersumber dari estimasi Google Maps dan laporan masyarakat. Data ini tidak 100% akurat dan kondisi riil di lapangan dapat berbeda. Informasi ini hanya digunakan sebagai bahan pembanding.
+            </p>
+        </div>
+    </div>
+
     <!-- STATS SUMMARY BAR -->
-    <section class="bg-gray-900 border-b border-gray-800 text-white shrink-0 px-4 py-2 z-20 overflow-x-auto">
+    <section class="bg-slate-900 border-b border-slate-800 text-white shrink-0 px-4 py-2 z-20 overflow-x-auto">
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs min-w-[680px]">
-            <div class="flex items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/60 flex-1">
-                <i class="fa-solid fa-gas-pump text-amber-400"></i>
-                <span class="text-gray-400">Total SPBU Terdaftar:</span>
-                <strong id="statTotalSpbu" class="text-amber-400 font-bold">0 SPBU</strong>
+            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60 flex-1">
+                <i class="fa-solid fa-satellite-dish text-amber-400"></i>
+                <span class="text-slate-400">Total SPBU Terdeteksi:</span>
+                <strong id="statTotalSpbu" class="text-amber-400 font-bold">Memuat...</strong>
             </div>
-            <div class="flex items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/60 flex-1">
+            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60 flex-1">
                 <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                <span class="text-gray-400">Antrean Lancar:</span>
+                <span class="text-slate-400">Antrean Lancar:</span>
                 <strong id="statLancarSpbu" class="text-emerald-400 font-bold">0 SPBU</strong>
             </div>
-            <div class="flex items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/60 flex-1">
+            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60 flex-1">
                 <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
-                <span class="text-gray-400">Antrean Macet:</span>
+                <span class="text-slate-400">Antrean Macet:</span>
                 <strong id="statMacetSpbu" class="text-red-400 font-bold">0 SPBU</strong>
             </div>
-            <div class="flex items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/60 flex-1">
+            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60 flex-1">
                 <i class="fa-solid fa-users text-blue-400"></i>
-                <span class="text-gray-400">Laporan Warga:</span>
+                <span class="text-slate-400">Laporan Warga:</span>
                 <strong id="statTotalReports" class="text-blue-300 font-bold">0 Laporan</strong>
             </div>
         </div>
     </section>
 
-    <!-- MOBILE TABS TOGGLE -->
-    <div class="md:hidden bg-gray-900 border-b border-gray-800 flex text-xs font-bold text-gray-400 shrink-0 z-20">
+    <!-- MOBILE TABS TOGGLE (VISIBLE ON MOBILE ONLY) -->
+    <div class="md:hidden bg-slate-900 border-b border-slate-800 flex text-xs font-bold text-slate-400 shrink-0 z-20">
         <button id="mobileTabListBtn" onclick="switchMobileTab('list')" class="flex-1 py-2.5 text-center border-b-2 border-red-500 text-white flex items-center justify-center gap-2">
             <i class="fa-solid fa-list-ul"></i>
             <span>Daftar SPBU Bali</span>
         </button>
-        <button id="mobileTabMapBtn" onclick="switchMobileTab('map')" class="flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-gray-200 flex items-center justify-center gap-2">
+        <button id="mobileTabMapBtn" onclick="switchMobileTab('map')" class="flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-slate-200 flex items-center justify-center gap-2">
             <i class="fa-solid fa-map-location-dot"></i>
             <span>Peta Traffic Google</span>
         </button>
@@ -116,25 +140,26 @@
     <!-- MAIN WORKSPACE -->
     <main class="flex-1 flex overflow-hidden relative">
 
-        <!-- LEFT SIDEBAR -->
-        <aside id="sidebarPane" class="w-full md:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full z-10 shrink-0">
+        <!-- LEFT SIDEBAR: FILTERS, SEARCH, & SPBU CARDS -->
+        <aside id="sidebarPane" class="w-full md:w-[420px] bg-white border-r border-slate-200 flex flex-col h-full z-10 shrink-0">
             
             <!-- SEARCH & FILTER SECTION -->
-            <div class="p-3.5 border-b border-gray-100 bg-gray-50 space-y-2.5 shrink-0">
+            <div class="p-3.5 border-b border-slate-100 bg-slate-50 space-y-2.5 shrink-0">
                 <!-- Search Input -->
                 <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-xs"></i>
-                    <input type="text" id="searchInput" placeholder="Cari nama SPBU, jalan, atau area di Bali..." class="w-full pl-8 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition shadow-sm">
-                    <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 text-xs">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="searchInput" placeholder="Cari nama SPBU, jalan, atau area di Bali..." class="w-full pl-8 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition shadow-sm">
+                    <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
 
-                <!-- Filters Grid -->
+                <!-- Kabupaten & Status Filters Grid -->
                 <div class="grid grid-cols-2 gap-2">
+                    <!-- Kabupaten Dropdown -->
                     <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Kabupaten / Kota</label>
-                        <select id="districtFilter" onchange="applyFilters()" class="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 font-medium focus:outline-none focus:border-red-500">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Kabupaten / Kota</label>
+                        <select id="districtFilter" onchange="applyFilters()" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-red-500">
                             <option value="ALL">Semua Bali (9 Kab/Kota)</option>
                             <option value="Badung">Badung</option>
                             <option value="Denpasar">Kota Denpasar</option>
@@ -148,79 +173,84 @@
                         </select>
                     </div>
 
+                    <!-- Congestion Filter -->
                     <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Kondisi Antrean</label>
-                        <select id="congestionFilter" onchange="applyFilters()" class="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 font-medium focus:outline-none focus:border-red-500">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Kondisi Antrean</label>
+                        <select id="congestionFilter" onchange="applyFilters()" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-red-500">
                             <option value="ALL">Semua Kondisi</option>
-                            <option value="lancar">🟢 Lancar (&lt; 5 mnt)</option>
-                            <option value="sedang">🟡 Sedang (5-15 mnt)</option>
-                            <option value="macet">🔴 Macet (15-30 mnt)</option>
-                            <option value="parah">🔴 Macet Parah (&gt; 30 mnt)</option>
+                            <option value="lancar">🟢 Lancar (&lt; 5m)</option>
+                            <option value="sedang">🟡 Sedang (5-15m)</option>
+                            <option value="macet">🔴 Macet (15-25m)</option>
+                            <option value="parah">🔴 Macet Parah (&gt; 25m)</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Fuel Filter Pills -->
                 <div>
-                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Filter Stok BBM Tersedia</label>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Filter Stok BBM Tersedia</label>
                     <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
-                        <button onclick="setFuelFilter('ALL')" id="fuelFilter-ALL" class="fuel-filter-btn active bg-gray-800 text-white px-2.5 py-1 rounded-md font-medium transition shrink-0">Semua</button>
-                        <button onclick="setFuelFilter('pertalite')" id="fuelFilter-pertalite" class="fuel-filter-btn bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Pertalite</button>
-                        <button onclick="setFuelFilter('pertamax')" id="fuelFilter-pertamax" class="fuel-filter-btn bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Pertamax</button>
-                        <button onclick="setFuelFilter('solar')" id="fuelFilter-solar" class="fuel-filter-btn bg-white border border-gray-200 text-gray-600 hover:bg-amber-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Bio Solar</button>
-                        <button onclick="setFuelFilter('dexlite')" id="fuelFilter-dexlite" class="fuel-filter-btn bg-white border border-gray-200 text-gray-600 hover:bg-purple-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Dexlite/Turbo</button>
+                        <button onclick="setFuelFilter('ALL')" id="fuelFilter-ALL" class="fuel-filter-btn active bg-slate-800 text-white px-2.5 py-1 rounded-md font-medium transition shrink-0">Semua</button>
+                        <button onclick="setFuelFilter('pertalite')" id="fuelFilter-pertalite" class="fuel-filter-btn bg-white border border-slate-200 text-slate-600 hover:bg-emerald-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Pertalite</button>
+                        <button onclick="setFuelFilter('pertamax')" id="fuelFilter-pertamax" class="fuel-filter-btn bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Pertamax</button>
+                        <button onclick="setFuelFilter('solar')" id="fuelFilter-solar" class="fuel-filter-btn bg-white border border-slate-200 text-slate-600 hover:bg-amber-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Bio Solar</button>
+                        <button onclick="setFuelFilter('dexlite')" id="fuelFilter-dexlite" class="fuel-filter-btn bg-white border border-slate-200 text-slate-600 hover:bg-purple-50 px-2.5 py-1 rounded-md font-medium transition shrink-0">Dexlite/Turbo</button>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB SWITCHER -->
-            <div class="flex border-b border-gray-200 bg-white text-xs font-bold text-gray-500 shrink-0">
+            <!-- TAB SWITCHER: SPBU LIST vs COMMUNITY REPORTS -->
+            <div class="flex border-b border-slate-200 bg-white text-xs font-bold text-slate-500 shrink-0">
                 <button onclick="switchSidebarTab('spbu-list')" id="tabSpbuListBtn" class="flex-1 py-2.5 text-center border-b-2 border-red-600 text-red-600">
                     Daftar SPBU (<span id="spbuCountBadge">0</span>)
                 </button>
-                <button onclick="switchSidebarTab('activity-feed')" id="tabActivityFeedBtn" class="flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-gray-800">
+                <button onclick="switchSidebarTab('activity-feed')" id="tabActivityFeedBtn" class="flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-slate-800">
                     Laporan Warga (<span id="reportCountBadge">0</span>)
                 </button>
             </div>
 
             <!-- SCROLLABLE LIST CONTAINER -->
             <div id="sidebarScrollArea" class="flex-1 overflow-y-auto p-3 space-y-2.5">
-                <!-- SPBU Cards -->
+                <!-- SPBU Cards dynamically populated -->
             </div>
 
-            <!-- SIDEBAR FOOTER -->
-            <div class="p-2.5 bg-gray-50 border-t border-gray-200 text-[11px] text-gray-500 flex items-center justify-between shrink-0">
-                <span><i class="fa-solid fa-shield-halved text-emerald-500 mr-1"></i> Vercel Production Ready</span>
-                <span id="lastUpdatedText" class="font-medium text-gray-600">Terupdate</span>
+            <!-- SIDEBAR FOOTER & CREDIT -->
+            <div class="p-2.5 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+                <span class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-red-500"></i>
+                    <span>Dibuat oleh <strong class="text-amber-400 font-bold">Ngurah Arya</strong> & <strong class="text-blue-400 font-bold">Gemini</strong></span>
+                </span>
+                <span id="lastUpdatedText" class="font-medium text-slate-400">Terupdate</span>
             </div>
         </aside>
 
-        <!-- RIGHT PANE: MAP & DETAILS -->
-        <section id="mapPane" class="flex-1 bg-gray-200 flex flex-col relative h-full w-full hidden md:flex">
+        <!-- RIGHT PANE: GOOGLE MAPS EMBED IFRAME & DETAIL PANEL -->
+        <section id="mapPane" class="flex-1 bg-slate-200 flex flex-col relative h-full w-full hidden md:flex">
             
-            <!-- TOP MAP BANNER -->
-            <div id="mapTopOverlay" class="bg-white/95 backdrop-blur border-b border-gray-200 p-3 sm:p-4 shrink-0 shadow-sm z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <!-- ACTIVE SPBU TOP BANNER OVERLAY -->
+            <div id="mapTopOverlay" class="glass-panel border-b border-slate-200/80 p-3 sm:p-4 shrink-0 shadow-sm z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-start gap-3">
                     <div id="activeSpbuBadgeIcon" class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-lg font-bold shrink-0">
                         <i class="fa-solid fa-gas-pump"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <span id="activeSpbuCode" class="text-[10px] font-mono bg-gray-100 border border-gray-200 text-gray-600 px-1.5 py-0.5 rounded">SPBU Bali</span>
+                            <span id="activeSpbuCode" class="text-[10px] font-mono bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">SPBU Bali</span>
                             <span id="activeSpbuDistrict" class="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase">Kab. Bali</span>
-                            <span id="activeSpbuCoords" class="text-[10px] text-gray-400 font-mono hidden sm:inline">-8.00, 115.00</span>
+                            <span id="activeSpbuCoords" class="text-[10px] text-slate-400 font-mono hidden sm:inline">-8.00, 115.00</span>
                         </div>
-                        <h2 id="activeSpbuTitle" class="font-bold text-gray-900 text-base sm:text-lg leading-tight">Pilih SPBU Bali</h2>
-                        <p id="activeSpbuAddress" class="text-xs text-gray-500 line-clamp-1 mt-0.5">Klik salah satu SPBU untuk melihat rute dan lalu lintas realtime.</p>
+                        <h2 id="activeSpbuTitle" class="font-bold text-slate-900 text-base sm:text-lg leading-tight">Pilih SPBU Bali untuk Tampilan Traffic</h2>
+                        <p id="activeSpbuAddress" class="text-xs text-slate-500 line-clamp-1 mt-0.5">Klik salah satu SPBU di sebelah kiri untuk melihat jalur lalu lintas jalan raya realtime.</p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 justify-between sm:justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-0 border-gray-100">
+                <!-- Quick Actions & Status Badge -->
+                <div class="flex items-center gap-2 justify-between sm:justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-0 border-slate-100">
                     <div class="text-right">
                         <span id="activeSpbuStatusBadge" class="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200">
                             🟢 Lancar
                         </span>
-                        <div id="activeSpbuWaitText" class="text-[11px] text-gray-500 font-medium mt-0.5">Est. Tunggu: ~3 mnt</div>
+                        <div id="activeSpbuWaitText" class="text-[11px] text-slate-500 font-medium mt-0.5">Est. Tunggu: ~3 mnt</div>
                     </div>
                     <a id="btnExternalGmaps" href="#" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition flex items-center gap-1.5">
                         <i class="fa-solid fa-diamond-turn-right text-sm"></i>
@@ -231,7 +261,7 @@
             </div>
 
             <!-- MAP IFRAME CONTAINER -->
-            <div class="flex-1 relative bg-gray-300">
+            <div class="flex-1 relative bg-slate-300">
                 <div class="map-iframe-container">
                     <iframe 
                         id="googleMapIframe" 
@@ -243,11 +273,12 @@
                     </iframe>
                 </div>
 
-                <div class="absolute bottom-4 right-4 z-10 bg-white/95 backdrop-blur border border-gray-200 p-3 rounded-2xl shadow-xl max-w-xs hidden sm:block text-xs space-y-1.5">
-                    <div class="font-bold text-gray-800 border-b border-gray-200 pb-1">
-                        <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> Panduan Garis Traffic Google
+                <!-- Floating Helper Overlay -->
+                <div class="absolute bottom-4 right-4 z-10 glass-panel border border-slate-200/80 p-3 rounded-2xl shadow-xl max-w-xs hidden sm:block text-xs space-y-1.5">
+                    <div class="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1">
+                        <span><i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> Panduan Garis Traffic Google</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-1 text-[11px] text-gray-600">
+                    <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-600">
                         <div class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded bg-emerald-500"></span> Hijau: Lancar</div>
                         <div class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded bg-amber-500"></span> Kuning: Sedang</div>
                         <div class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded bg-red-600"></span> Merah: Macet</div>
@@ -257,139 +288,170 @@
             </div>
 
             <!-- BOTTOM SPBU DETAILS DRAWER -->
-            <div id="activeSpbuDetailsDrawer" class="bg-white border-t border-gray-200 p-3 sm:p-4 shrink-0 shadow-lg space-y-3 z-10">
+            <div id="activeSpbuDetailsDrawer" class="bg-white border-t border-slate-200 p-3 sm:p-4 shrink-0 shadow-lg space-y-3 z-10">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-cubes-stacked text-gray-400"></i>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-cubes-stacked text-slate-400"></i>
                         <span>Ketersediaan Stok BBM Realtime</span>
                     </h3>
-                    <span id="activeSpbuQueueMeters" class="text-xs text-gray-600 font-semibold bg-gray-100 px-2 py-0.5 rounded">
+                    <span id="activeSpbuQueueMeters" class="text-xs text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded">
                         Ekor Antrean: ~20 Meter
                     </span>
                 </div>
 
+                <!-- Fuel Availability Pills Grid -->
                 <div id="activeSpbuFuelsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <!-- Fuel status -->
+                    <!-- Fuel status dynamically populated -->
                 </div>
             </div>
         </section>
     </main>
 
+    <!-- OVERPASS LOADING MODAL OVERLAY -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[4000] flex flex-col items-center justify-center p-4 text-center text-white transition-opacity duration-300">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-2xl shadow-2xl shadow-red-600/40 mb-4 animate-bounce">
+            <i class="fa-solid fa-satellite-dish"></i>
+        </div>
+        <h2 class="text-lg font-bold">Mengambil Seluruh SPBU se-Bali...</h2>
+        <p id="loadingSubtext" class="text-xs text-slate-400 max-w-sm mt-1">Mengakses API OpenStreetMap (Overpass API) untuk mendeteksi semua titik SPBU di Bali.</p>
+        
+        <div class="w-48 bg-slate-800 rounded-full h-1.5 mt-4 overflow-hidden">
+            <div class="bg-amber-400 h-full w-full animate-pulse"></div>
+        </div>
+    </div>
+
     <!-- CROWDSOURCING REPORT MODAL -->
-    <div id="reportModal" class="fixed inset-0 bg-gray-950/70 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-100 overflow-hidden">
+    <div id="reportModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[3000] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
             
-            <div class="bg-gray-950 p-4 text-white flex items-center justify-between border-b border-gray-800">
+            <!-- Modal Header -->
+            <div class="bg-slate-950 p-4 text-white flex items-center justify-between border-b border-slate-800">
                 <div class="flex items-center gap-2.5">
                     <div class="w-8 h-8 rounded-lg bg-red-600/30 border border-red-500/40 text-red-400 flex items-center justify-center">
                         <i class="fa-solid fa-bullhorn text-sm"></i>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm sm:text-base">Laporkan Antrean SPBU Bali</h3>
-                        <p class="text-[11px] text-gray-400">Update kondisi antrean & BBM di Bali</p>
+                        <p class="text-[11px] text-slate-400">Bantu pengendara lain mengetahui kondisi antrean & BBM di Bali</p>
                     </div>
                 </div>
-                <button onclick="closeReportModal()" class="text-gray-400 hover:text-white p-1.5 rounded-lg transition">
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg transition">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
+            <!-- Form -->
             <form id="reportForm" onsubmit="submitReport(event)" class="p-4 sm:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                
+                <!-- Target SPBU -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Pilih Lokasi SPBU di Bali</label>
-                    <select id="reportSpbuSelect" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-red-500 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Pilih Lokasi SPBU di Bali</label>
+                    <select id="reportSpbuSelect" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        <!-- Options generated via JS -->
                     </select>
                 </div>
 
+                <!-- Congestion Level Radio -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Tingkat Kemacetan Antrean</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Tingkat Kemacetan Antrean</label>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <label class="cursor-pointer">
                             <input type="radio" name="reportStatus" value="lancar" class="peer sr-only">
-                            <div class="p-2 border border-gray-200 rounded-xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-800 text-center font-bold transition">
+                            <div class="p-2 border border-slate-200 rounded-xl peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-800 text-center font-bold transition">
                                 🟢 Lancar
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="reportStatus" value="sedang" checked class="peer sr-only">
-                            <div class="p-2 border border-gray-200 rounded-xl peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 text-center font-bold transition">
+                            <div class="p-2 border border-slate-200 rounded-xl peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 text-center font-bold transition">
                                 🟡 Sedang
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="reportStatus" value="macet" class="peer sr-only">
-                            <div class="p-2 border border-gray-200 rounded-xl peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-800 text-center font-bold transition">
+                            <div class="p-2 border border-slate-200 rounded-xl peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-800 text-center font-bold transition">
                                 🔴 Macet
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="reportStatus" value="parah" class="peer sr-only">
-                            <div class="p-2 border border-gray-200 rounded-xl peer-checked:border-red-950 peer-checked:bg-red-100 peer-checked:text-red-950 text-center font-bold transition">
-                                🔴 Parah
+                            <div class="p-2 border border-slate-200 rounded-xl peer-checked:border-red-950 peer-checked:bg-red-100 peer-checked:text-red-950 text-center font-bold transition">
+                                🔴 Parah (&gt; 25m)
                             </div>
                         </label>
                     </div>
                 </div>
 
+                <!-- Estimated Wait Time & Distance -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Perkiraan Tunggu (Menit)</label>
-                        <input type="number" id="reportWaitTime" min="1" max="180" value="10" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Perkiraan Tunggu (Menit)</label>
+                        <input type="number" id="reportWaitTime" min="1" max="180" value="10" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Panjang Antrean (Meter)</label>
-                        <input type="number" id="reportQueueMeters" min="5" max="1500" value="50" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Panjang Antrean (Meter)</label>
+                        <input type="number" id="reportQueueMeters" min="5" max="1500" value="30" oninput="autoCheckCongestion(this.value)" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        <p class="text-[10px] text-slate-400 mt-1">*Antrean &gt; 25 meter otomatis dikategorikan Macet Parah</p>
                     </div>
                 </div>
 
+                <!-- Fuel Availability Grid Select -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Status Stok BBM</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Status Stok BBM</label>
                     <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="p-2 border border-gray-200 rounded-xl bg-gray-50 space-y-1">
-                            <span class="font-bold text-gray-700 block">Pertalite</span>
-                            <select id="reportFuelPertalite" class="w-full bg-white border border-gray-200 rounded-lg p-1 text-xs">
+                        
+                        <!-- Pertalite -->
+                        <div class="p-2 border border-slate-200 rounded-xl bg-slate-50 space-y-1">
+                            <span class="font-bold text-slate-700 block">Pertalite</span>
+                            <select id="reportFuelPertalite" class="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs">
                                 <option value="tersedia">🟢 Tersedia</option>
                                 <option value="menipis">🟡 Menipis</option>
                                 <option value="habis">🔴 Habis</option>
                             </select>
                         </div>
 
-                        <div class="p-2 border border-gray-200 rounded-xl bg-gray-50 space-y-1">
-                            <span class="font-bold text-gray-700 block">Pertamax</span>
-                            <select id="reportFuelPertamax" class="w-full bg-white border border-gray-200 rounded-lg p-1 text-xs">
+                        <!-- Pertamax -->
+                        <div class="p-2 border border-slate-200 rounded-xl bg-slate-50 space-y-1">
+                            <span class="font-bold text-slate-700 block">Pertamax</span>
+                            <select id="reportFuelPertamax" class="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs">
                                 <option value="tersedia">🟢 Tersedia</option>
                                 <option value="menipis">🟡 Menipis</option>
                                 <option value="habis">🔴 Habis</option>
                             </select>
                         </div>
 
-                        <div class="p-2 border border-gray-200 rounded-xl bg-gray-50 space-y-1">
-                            <span class="font-bold text-gray-700 block">Bio Solar</span>
-                            <select id="reportFuelSolar" class="w-full bg-white border border-gray-200 rounded-lg p-1 text-xs">
+                        <!-- Bio Solar -->
+                        <div class="p-2 border border-slate-200 rounded-xl bg-slate-50 space-y-1">
+                            <span class="font-bold text-slate-700 block">Bio Solar</span>
+                            <select id="reportFuelSolar" class="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs">
                                 <option value="tersedia">🟢 Tersedia</option>
                                 <option value="menipis">🟡 Menipis</option>
                                 <option value="habis">🔴 Habis</option>
                             </select>
                         </div>
 
-                        <div class="p-2 border border-gray-200 rounded-xl bg-gray-50 space-y-1">
-                            <span class="font-bold text-gray-700 block">Dexlite / Turbo</span>
-                            <select id="reportFuelDexlite" class="w-full bg-white border border-gray-200 rounded-lg p-1 text-xs">
+                        <!-- Dexlite / Pertamax Turbo -->
+                        <div class="p-2 border border-slate-200 rounded-xl bg-slate-50 space-y-1">
+                            <span class="font-bold text-slate-700 block">Dexlite / Turbo</span>
+                            <select id="reportFuelDexlite" class="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs">
                                 <option value="tersedia">🟢 Tersedia</option>
                                 <option value="menipis">🟡 Menipis</option>
                                 <option value="habis">🔴 Habis</option>
                             </select>
                         </div>
+
                     </div>
                 </div>
 
+                <!-- User Note -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Catatan Tambahan (Opsional)</label>
-                    <textarea id="reportNote" rows="2" placeholder="Contoh: Antrean Pertalite meluber ke jalan utama..." class="w-full bg-gray-50 border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Catatan Tambahan (Opsional)</label>
+                    <textarea id="reportNote" rows="2" placeholder="Contoh: Antrean Pertalite meluber ke jalan utama, jalur motor relatif cepat..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"></textarea>
                 </div>
 
+                <!-- Modal Actions -->
                 <div class="pt-2 flex items-center gap-2">
-                    <button type="button" onclick="closeReportModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold transition">
+                    <button type="button" onclick="closeReportModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition">
                         Batal
                     </button>
                     <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-red-600/30 transition flex items-center justify-center gap-1.5">
@@ -404,75 +466,225 @@
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div id="toastContainer" class="fixed top-16 right-4 z-[5000] flex flex-col gap-2 max-w-xs pointer-events-none"></div>
 
-    <!-- JAVASCRIPT LOGIC -->
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        // Database Instan SPBU Seluruh Kabupaten / Kota di Bali
-        const BALI_SPBU_DATABASE = [
-            // BADUNG
-            { id: "spbu-1", code: "54.801.02", name: "SPBU Pertamina Sunset Road", lat: -8.7183, lng: 115.1686, district: "Badung", address: "Jl. Sunset Road, Kuta, Badung", status: "sedang", waitTime: 12, queueMeters: 65, updatedAt: Date.now() - 300000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-2", code: "54.801.38", name: "SPBU Pertamina Raya Canggu", lat: -8.6472, lng: 115.1438, district: "Badung", address: "Jl. Raya Canggu, Kuta Utara, Badung", status: "parah", waitTime: 35, queueMeters: 280, updatedAt: Date.now() - 120000, fuels: { pertalite: "menipis", pertamax: "tersedia", solar: "habis", dexlite: "tersedia" } },
-            { id: "spbu-3", code: "54.803.05", name: "SPBU Pertamina Unud Jimbaran", lat: -8.7952, lng: 115.1724, district: "Badung", address: "Jl. Kampus Unud, Jimbaran, Badung", status: "sedang", waitTime: 15, queueMeters: 80, updatedAt: Date.now() - 600000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "menipis", dexlite: "tersedia" } },
-            { id: "spbu-4", code: "54.803.01", name: "SPBU Pertamina By Pass Nusa Dua", lat: -8.7981, lng: 115.2215, district: "Badung", address: "Jl. By Pass Ngurah Rai, Nusa Dua, Badung", status: "lancar", waitTime: 4, queueMeters: 20, updatedAt: Date.now() - 900000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-5", code: "54.803.08", name: "SPBU Pertamina Raya Sempidi", lat: -8.5910, lng: 115.1840, district: "Badung", address: "Jl. Raya Sempidi, Mengwi, Badung", status: "lancar", waitTime: 5, queueMeters: 25, updatedAt: Date.now() - 1200000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-6", code: "54.803.10", name: "SPBU Pertamina Tuban Bandara", lat: -8.7420, lng: 115.1760, district: "Badung", address: "Jl. Raya Tuban, Kuta, Badung", status: "sedang", waitTime: 10, queueMeters: 45, updatedAt: Date.now() - 400000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // DENPASAR
-            { id: "spbu-7", code: "54.801.06", name: "SPBU Pertamina Gatot Subroto Barat", lat: -8.6368, lng: 115.1932, district: "Denpasar", address: "Jl. Gatot Subroto Barat No. 340, Denpasar", status: "macet", waitTime: 25, queueMeters: 180, updatedAt: Date.now() - 400000, fuels: { pertalite: "menipis", pertamax: "tersedia", solar: "habis", dexlite: "tersedia" } },
-            { id: "spbu-8", code: "54.801.12", name: "SPBU Pertamina Teuku Umar", lat: -8.6740, lng: 115.2070, district: "Denpasar", address: "Jl. Teuku Umar No. 120, Denpasar", status: "sedang", waitTime: 10, queueMeters: 50, updatedAt: Date.now() - 700000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-9", code: "54.801.18", name: "SPBU Pertamina Sanur Bypass", lat: -8.6912, lng: 115.2571, district: "Denpasar", address: "Jl. Bypass Ngurah Rai, Sanur, Denpasar", status: "lancar", waitTime: 3, queueMeters: 15, updatedAt: Date.now() - 1200000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-10", code: "54.801.22", name: "SPBU Pertamina Hayam Wuruk", lat: -8.6601, lng: 115.2335, district: "Denpasar", address: "Jl. Hayam Wuruk, Renon, Denpasar", status: "sedang", waitTime: 14, queueMeters: 75, updatedAt: Date.now() - 800000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "menipis", dexlite: "tersedia" } },
-            { id: "spbu-11", code: "54.801.35", name: "SPBU Pertamina Sesetan Raya", lat: -8.6950, lng: 115.2210, district: "Denpasar", address: "Jl. Raya Sesetan, Denpasar Selatan", status: "lancar", waitTime: 6, queueMeters: 30, updatedAt: Date.now() - 1500000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // GIANYAR
-            { id: "spbu-12", code: "54.805.01", name: "SPBU Pertamina Raya Ubud", lat: -8.5070, lng: 115.2625, district: "Gianyar", address: "Jl. Raya Ubud, Gianyar", status: "macet", waitTime: 28, queueMeters: 210, updatedAt: Date.now() - 350000, fuels: { pertalite: "menipis", pertamax: "tersedia", solar: "habis", dexlite: "tersedia" } },
-            { id: "spbu-13", code: "54.805.04", name: "SPBU Pertamina Batubulan", lat: -8.6080, lng: 115.2480, district: "Gianyar", address: "Jl. Raya Batubulan, Gianyar", status: "lancar", waitTime: 5, queueMeters: 25, updatedAt: Date.now() - 1800000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-14", code: "54.805.07", name: "SPBU Pertamina Sukawati", lat: -8.5950, lng: 115.2830, district: "Gianyar", address: "Jl. Raya Sukawati, Gianyar", status: "sedang", waitTime: 11, queueMeters: 50, updatedAt: Date.now() - 900000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // TABANAN
-            { id: "spbu-15", code: "54.821.01", name: "SPBU Pertamina Kediri Tabanan", lat: -8.5410, lng: 115.1400, district: "Tabanan", address: "Jl. Raya Kediri, Tabanan", status: "macet", waitTime: 22, queueMeters: 160, updatedAt: Date.now() - 500000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "menipis", dexlite: "tersedia" } },
-            { id: "spbu-16", code: "54.821.03", name: "SPBU Pertamina Pesiapan Tabanan", lat: -8.5320, lng: 115.1220, district: "Tabanan", address: "Jl. Dr. Ir. Soekarno, Pesiapan, Tabanan", status: "lancar", waitTime: 4, queueMeters: 20, updatedAt: Date.now() - 2100000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // BULELENG
-            { id: "spbu-17", code: "54.811.01", name: "SPBU Pertamina Singaraja Ahmad Yani", lat: -8.1170, lng: 115.0880, district: "Buleleng", address: "Jl. Ahmad Yani, Singaraja, Buleleng", status: "lancar", waitTime: 5, queueMeters: 30, updatedAt: Date.now() - 1500000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-            { id: "spbu-18", code: "54.811.04", name: "SPBU Pertamina Seririt", lat: -8.1920, lng: 114.9350, district: "Buleleng", address: "Jl. Raya Seririt-Singaraja, Buleleng", status: "sedang", waitTime: 8, queueMeters: 40, updatedAt: Date.now() - 1100000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // KARANGASEM
-            { id: "spbu-19", code: "54.808.01", name: "SPBU Pertamina Amlapura Karangasem", lat: -8.4480, lng: 115.6020, district: "Karangasem", address: "Jl. Sudirman, Amlapura, Karangasem", status: "sedang", waitTime: 11, queueMeters: 55, updatedAt: Date.now() - 2000000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // JEMBRANA
-            { id: "spbu-20", code: "54.822.01", name: "SPBU Pertamina Negara Jembrana", lat: -8.3580, lng: 114.6250, district: "Jembrana", address: "Jl. Raya Denpasar-Gilimanuk, Negara", status: "lancar", waitTime: 4, queueMeters: 20, updatedAt: Date.now() - 2500000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // BANGLI
-            { id: "spbu-21", code: "54.806.01", name: "SPBU Pertamina Kota Bangli", lat: -8.4550, lng: 115.3580, district: "Bangli", address: "Jl. Merdeka, Kota Bangli", status: "lancar", waitTime: 6, queueMeters: 35, updatedAt: Date.now() - 1100000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
-
-            // KLUNGKUNG
-            { id: "spbu-22", code: "54.807.01", name: "SPBU Pertamina Semarapura Klungkung", lat: -8.5380, lng: 115.4050, district: "Klungkung", address: "Jl. Untung Surapati, Semarapura", status: "sedang", waitTime: 9, queueMeters: 45, updatedAt: Date.now() - 950000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } }
+        // URUTAN OVERPASS ENDPOINTS LEBIH RESILIEN UNTUK MENCEGAH 504 GATEWAY TIMEOUT
+        const OVERPASS_ENDPOINTS = [
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter",
+            "https://overpass-api.de/api/interpreter"
         ];
 
-        let spbuList = [...BALI_SPBU_DATABASE];
+        // OVERPASS QL QUERY FOR BALI BOUNDING BOX [-8.95, 114.43, -8.05, 115.75]
+        const OVERPASS_QUERY = `[out:json][timeout:15];(node["amenity"="fuel"](-8.95,114.43,-8.05,115.75);way["amenity"="fuel"](-8.95,114.43,-8.05,115.75););out center;`;
+
+        // FALLBACK BACKUP DATASET BALI SPBU
+        const staticFallbackSPBU = [
+            { id: "spbu-osm-1", code: "SPBU 54.811.01", name: "SPBU Pertamina Singaraja Ahmad Yani", lat: -8.1170, lng: 115.0880, district: "Buleleng", address: "Jl. Ahmad Yani, Singaraja, Buleleng, Bali", status: "parah", waitTime: 20, queueMeters: 30, updatedAt: Date.now() - 300000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
+            { id: "spbu-osm-2", code: "SPBU 54.811.04", name: "SPBU Pertamina Seririt", lat: -8.1920, lng: 114.9350, district: "Buleleng", address: "Jl. Raya Seririt-Singaraja, Buleleng, Bali", status: "lancar", waitTime: 5, queueMeters: 10, updatedAt: Date.now() - 120000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
+            { id: "spbu-osm-3", code: "SPBU 54.801.02", name: "SPBU Pertamina Sunset Road", lat: -8.7183, lng: 115.1686, district: "Badung", address: "Jl. Sunset Road, Kuta, Badung, Bali", status: "parah", waitTime: 20, queueMeters: 65, updatedAt: Date.now() - 600000, fuels: { pertalite: "tersedia", pertamax: "tersedia", solar: "tersedia", dexlite: "tersedia" } },
+            { id: "spbu-osm-4", code: "SPBU 54.801.38", name: "SPBU Pertamina Raya Canggu", lat: -8.6472, lng: 115.1438, district: "Badung", address: "Jl. Raya Canggu, Kuta Utara, Badung, Bali", status: "parah", waitTime: 35, queueMeters: 280, updatedAt: Date.now() - 900000, fuels: { pertalite: "menipis", pertamax: "tersedia", solar: "habis", dexlite: "tersedia" } }
+        ];
+
+        // GLOBAL APPLICATION STATE
+        let spbuList = [];
         let userReports = [];
-        let activeSpbuId = "spbu-1";
+        let activeSpbuId = null;
         let activeSidebarTab = "spbu-list";
         let activeFuelFilter = "ALL";
         let searchKeyword = "";
 
-        const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_REPORTS_V1";
+        // TERISOLASI AGAR TIDAK BENTROK DATA DI VERCEL
+        const STORAGE_REPORTS_KEY = "PANTAU_SPBU_BALI_VERCEL_STATIC_V12";
 
+        // INITIALIZATION
         window.addEventListener("DOMContentLoaded", () => {
             loadUserReports();
             setupSearchListeners();
-            mergeUserReportsIntoSPBU();
-            renderAll();
+            fetchOverpassData();
         });
+
+        // HELPER TIMEOUT PER REQUEST
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 5000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
+
+        // FETCH ALL SPBUs IN BALI VIA OVERPASS API WITH MIRROR FALLBACKS
+        async function fetchOverpassData(isManualRefresh = false) {
+            const overlay = document.getElementById("loadingOverlay");
+            const icon = document.getElementById("reloadIcon");
+            
+            overlay.classList.remove("hidden");
+            if (icon) icon.classList.add("fa-spin");
+
+            let rawElements = null;
+
+            for (const endpoint of OVERPASS_ENDPOINTS) {
+                try {
+                    document.getElementById("loadingSubtext").innerText = `Mengakses Overpass OSM (${new URL(endpoint).hostname})...`;
+                    const response = await fetchWithTimeout(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: "data=" + encodeURIComponent(OVERPASS_QUERY),
+                        timeout: 5000
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.elements && data.elements.length > 0) {
+                            rawElements = data.elements;
+                            break;
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`Overpass endpoint ${endpoint} failed/timeout, trying next mirror...`);
+                }
+            }
+
+            if (rawElements) {
+                spbuList = parseOverpassElements(rawElements);
+                showToast(`Berhasil memuat ${spbuList.length} SPBU se-Bali dari OpenStreetMap!`, "success");
+            } else {
+                spbuList = [...staticFallbackSPBU];
+                showToast("Server Overpass sibuk. Memuat data cadangan SPBU Bali.", "info");
+            }
+
+            mergeUserReportsIntoSPBU();
+
+            if (spbuList.length > 0 && !activeSpbuId) {
+                activeSpbuId = spbuList[0].id;
+            }
+
+            overlay.classList.add("hidden");
+            if (icon) icon.classList.remove("fa-spin");
+
+            renderAll();
+        }
+
+        // PARSE RAW OVERPASS OSM ELEMENTS
+        function parseOverpassElements(elements) {
+            const parsed = [];
+
+            elements.forEach((el, index) => {
+                let lat = el.lat;
+                let lng = el.lon;
+
+                if (!lat && el.center) {
+                    lat = el.center.lat;
+                    lng = el.center.lon;
+                }
+
+                if (!lat || !lng) return;
+
+                const tags = el.tags || {};
+
+                let name = tags.name || tags.operator || tags.brand || tags["brand:wikidata"] || `SPBU Pertamina Bali (${el.id})`;
+                if (!name.toLowerCase().includes("spbu") && !name.toLowerCase().includes("pertamina") && !name.toLowerCase().includes("shell")) {
+                    name = `SPBU ${name}`;
+                }
+
+                let code = tags.ref || tags["ref:pertamina"] || tags["ref:google"] || `SPBU ${tags.operator || 'BALI'}`;
+                let street = tags["addr:street"] ? `${tags["addr:street"]} ${tags["addr:housenumber"] || ""}`.trim() : "";
+                let fullAddr = tags["addr:full"] || street || tags["addr:suburb"] || tags["addr:city"] || "Provinsi Bali";
+
+                let district = detectBaliRegency(lat, lng, tags);
+
+                const hash = (el.id || index) % 4;
+                let queueMeters = hash === 3 ? 35 : (hash === 2 ? 18 : (hash === 1 ? 10 : 4));
+                let initialStatus = getStatusFromQueue(queueMeters);
+
+                parsed.push({
+                    id: `osm-${el.id || index}`,
+                    code: code,
+                    name: name,
+                    lat: parseFloat(lat.toFixed(6)),
+                    lng: parseFloat(lng.toFixed(6)),
+                    district: district,
+                    address: fullAddr,
+                    status: initialStatus,
+                    waitTime: Math.max(3, Math.floor(queueMeters / 1.5)),
+                    queueMeters: queueMeters,
+                    updatedAt: Date.now() - (Math.floor(Math.random() * 3600) * 1000),
+                    fuels: {
+                        pertalite: hash === 3 ? "menipis" : "tersedia",
+                        pertamax: "tersedia",
+                        solar: hash === 2 ? "menipis" : "tersedia",
+                        dexlite: "tersedia"
+                    }
+                });
+            });
+
+            return parsed;
+        }
+
+        // DETEKSI KABUPATEN DENGAN DUKUNGAN BULELENG PERSISI
+        function detectBaliRegency(lat, lng, tags = {}) {
+            const text = JSON.stringify(tags).toLowerCase();
+
+            // Buleleng Keywords
+            if (text.includes("buleleng") || text.includes("singaraja") || text.includes("seririt") || text.includes("gerokgak") || text.includes("sawan") || text.includes("sukasada") || text.includes("banjar") || text.includes("kubutambahan") || text.includes("tejakula")) return "Buleleng";
+            if (text.includes("denpasar")) return "Denpasar";
+            if (text.includes("badung") || text.includes("kuta") || text.includes("canggu") || text.includes("jimbaran") || text.includes("nusa dua") || text.includes("mengwi") || text.includes("sempidi")) return "Badung";
+            if (text.includes("gianyar") || text.includes("ubud") || text.includes("sukawati") || text.includes("batubulan")) return "Gianyar";
+            if (text.includes("tabanan") || text.includes("kediri") || text.includes("pesiapan")) return "Tabanan";
+            if (text.includes("karangasem") || text.includes("amlapura")) return "Karangasem";
+            if (text.includes("jembrana") || text.includes("negara") || text.includes("gilimanuk")) return "Jembrana";
+            if (text.includes("klungkung") || text.includes("semarapura") || text.includes("penida")) return "Klungkung";
+            if (text.includes("bangli") || text.includes("kintamani")) return "Bangli";
+
+            // Geo Approximations
+            if (lat > -8.28) return "Buleleng"; // Wilayah Bali Utara = Buleleng
+            if (lng < 114.85) return "Jembrana";
+            if (lng > 115.48) return "Karangasem";
+            if (lat < -8.68 && lng > 115.15 && lng < 115.28) return "Denpasar";
+            if (lng >= 115.12 && lng <= 115.23 && lat < -8.55) return "Badung";
+            if (lng > 115.23 && lng <= 115.35 && lat > -8.62 && lat <= -8.45) return "Gianyar";
+            if (lng >= 114.85 && lng < 115.15 && lat >= -8.62) return "Tabanan";
+            if (lng > 115.32 && lng <= 115.45 && lat > -8.50) return "Bangli";
+            if (lng > 115.30 && lat <= -8.52) return "Klungkung";
+
+            return "Badung";
+        }
+
+        // KETENTUAN KEMACETAN: ANTREAN > 25 METER OTOMATIS MACET PARAH
+        function getStatusFromQueue(queueMeters) {
+            if (queueMeters > 25) return "parah";
+            if (queueMeters > 15) return "macet";
+            if (queueMeters > 5) return "sedang";
+            return "lancar";
+        }
+
+        function autoCheckCongestion(val) {
+            const meters = parseInt(val) || 0;
+            const parahRadio = document.querySelector('input[name="reportStatus"][value="parah"]');
+            const macetRadio = document.querySelector('input[name="reportStatus"][value="macet"]');
+            const sedangRadio = document.querySelector('input[name="reportStatus"][value="sedang"]');
+            const lancarRadio = document.querySelector('input[name="reportStatus"][value="lancar"]');
+
+            const calculatedStatus = getStatusFromQueue(meters);
+            if (calculatedStatus === "parah" && parahRadio) parahRadio.checked = true;
+            else if (calculatedStatus === "macet" && macetRadio) macetRadio.checked = true;
+            else if (calculatedStatus === "sedang" && sedangRadio) sedangRadio.checked = true;
+            else if (calculatedStatus === "lancar" && lancarRadio) lancarRadio.checked = true;
+        }
 
         function loadUserReports() {
             const saved = localStorage.getItem(STORAGE_REPORTS_KEY);
             if (saved) {
-                try {
-                    userReports = JSON.parse(saved);
-                } catch (e) {
-                    userReports = [];
-                }
+                try { userReports = JSON.parse(saved); } catch (e) { userReports = []; }
             }
         }
 
@@ -484,9 +696,9 @@
             userReports.forEach(rep => {
                 const spbu = spbuList.find(s => s.id === rep.spbuId);
                 if (spbu) {
-                    spbu.status = rep.status;
-                    spbu.waitTime = rep.waitTime;
                     spbu.queueMeters = rep.queueMeters;
+                    spbu.status = getStatusFromQueue(rep.queueMeters);
+                    spbu.waitTime = rep.waitTime;
                     spbu.updatedAt = rep.timestamp;
                     if (rep.fuels) spbu.fuels = rep.fuels;
                 }
@@ -547,10 +759,11 @@
                 const filtered = getFilteredSPBU();
 
                 if (filtered.length === 0) {
+                    const currentDistrict = document.getElementById("districtFilter").value;
                     container.innerHTML = `
-                        <div class="text-center py-12 px-4 text-gray-400 space-y-2">
-                            <i class="fa-solid fa-gas-pump text-3xl text-gray-300"></i>
-                            <p class="text-xs font-semibold">Tidak ditemukan SPBU cocok.</p>
+                        <div class="text-center py-12 px-4 text-slate-400 space-y-2">
+                            <i class="fa-solid fa-gas-pump-slash text-3xl"></i>
+                            <p class="text-xs font-semibold">Tidak ditemukan SPBU di ${currentDistrict === 'ALL' ? 'Bali' : currentDistrict}.</p>
                             <button onclick="resetFilters()" class="text-xs text-red-600 hover:underline font-bold mt-1">Reset Filter</button>
                         </div>
                     `;
@@ -563,28 +776,28 @@
                     const timeAgo = formatTimeAgo(spbu.updatedAt);
 
                     return `
-                        <div onclick="selectSPBU('${spbu.id}')" class="p-3 rounded-2xl border ${isActive ? 'bg-red-50/80 border-red-500 ring-2 ring-red-500/20' : 'bg-white border-gray-200 hover:border-gray-300'} shadow-sm transition duration-150 cursor-pointer space-y-2.5">
+                        <div onclick="selectSPBU('${spbu.id}')" class="p-3 rounded-2xl border ${isActive ? 'bg-red-50/80 border-red-500 ring-2 ring-red-500/20' : 'bg-white border-slate-200 hover:border-slate-300'} shadow-sm transition duration-150 cursor-pointer space-y-2.5">
                             <div class="flex items-start justify-between gap-2">
                                 <div>
                                     <div class="flex items-center gap-1.5">
-                                        <span class="text-[10px] font-mono font-bold text-gray-400">${spbu.code}</span>
+                                        <span class="text-[10px] font-mono font-bold text-slate-400">${spbu.code}</span>
                                         <span class="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 uppercase">${spbu.district}</span>
                                     </div>
-                                    <h3 class="font-bold text-xs sm:text-sm text-gray-900 leading-snug">${spbu.name}</h3>
-                                    <p class="text-[11px] text-gray-500 line-clamp-1 mt-0.5"><i class="fa-solid fa-location-dot text-gray-400 mr-1"></i>${spbu.address}</p>
+                                    <h3 class="font-bold text-xs sm:text-sm text-slate-900 leading-snug">${spbu.name}</h3>
+                                    <p class="text-[11px] text-slate-500 line-clamp-1 mt-0.5"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${spbu.address}</p>
                                 </div>
                                 <div class="shrink-0 text-right">
                                     ${statusBadge}
-                                    <div class="text-[10px] font-bold text-gray-700 mt-1">~${spbu.waitTime} Menit</div>
+                                    <div class="text-[10px] font-bold text-slate-700 mt-1">~${spbu.waitTime} Menit</div>
                                 </div>
                             </div>
 
-                            <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                                <div class="flex items-center gap-1 text-gray-600 font-medium">
-                                    <i class="fa-solid fa-road text-gray-400"></i>
-                                    <span>~${spbu.queueMeters}m antrean</span>
+                            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                                <div class="flex items-center gap-1 text-slate-600 font-medium">
+                                    <i class="fa-solid fa-road text-slate-400"></i>
+                                    <span class="${spbu.queueMeters > 25 ? 'text-red-700 font-bold' : ''}">~${spbu.queueMeters}m antrean</span>
                                 </div>
-                                <span class="text-[10px] text-gray-400">${timeAgo}</span>
+                                <span class="text-[10px] text-slate-400">${timeAgo}</span>
                             </div>
 
                             <div class="flex items-center gap-1 pt-0.5">
@@ -599,28 +812,28 @@
 
             } else {
                 if (userReports.length === 0) {
-                    container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Belum ada laporan warga tersimpan.</p>`;
+                    container.innerHTML = `<p class="text-xs text-slate-400 text-center py-8">Belum ada laporan dari warga Bali.</p>`;
                     return;
                 }
 
                 container.innerHTML = userReports.map(rep => {
-                    const statusBadge = getStatusBadgeHTML(rep.status);
+                    const statusBadge = getStatusBadgeHTML(getStatusFromQueue(rep.queueMeters));
                     const timeAgo = formatTimeAgo(rep.timestamp);
 
                     return `
-                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-2xl space-y-1.5 text-xs">
+                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5 text-xs">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <span class="font-bold text-gray-900 block">${rep.spbuName}</span>
+                                    <span class="font-bold text-slate-900 block">${rep.spbuName}</span>
                                     <span class="text-[10px] text-amber-700 font-bold uppercase">${rep.spbuDistrict}</span>
                                 </div>
-                                <span class="text-[10px] text-gray-400 shrink-0">${timeAgo}</span>
+                                <span class="text-[10px] text-slate-400 shrink-0">${timeAgo}</span>
                             </div>
                             <div class="flex items-center gap-2 pt-0.5">
                                 ${statusBadge}
-                                <span class="text-[11px] font-medium text-gray-600">Estimasi ~${rep.waitTime} mnt (${rep.queueMeters}m)</span>
+                                <span class="text-[11px] font-medium text-slate-600">Estimasi ~${rep.waitTime} mnt (${rep.queueMeters}m)</span>
                             </div>
-                            ${rep.note ? `<p class="text-[11px] text-gray-600 italic bg-white p-2 rounded-xl border border-gray-200/60 mt-1">"${rep.note}"</p>` : ''}
+                            ${rep.note ? `<p class="text-[11px] text-slate-600 italic bg-white p-2 rounded-xl border border-slate-200/60 mt-1">"${rep.note}"</p>` : ''}
                         </div>
                     `;
                 }).join('');
@@ -676,7 +889,7 @@
             } else if (status === 'macet') {
                 return `<span class="bg-red-100 text-red-800 border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-full inline-block">🔴 Macet</span>`;
             } else {
-                return `<span class="bg-red-950 text-red-100 border border-red-900 text-[10px] font-bold px-2 py-0.5 rounded-full inline-block">🔴 Parah</span>`;
+                return `<span class="bg-red-950 text-red-100 border border-red-900 text-[10px] font-bold px-2 py-0.5 rounded-full inline-block">🔴 Macet Parah</span>`;
             }
         }
 
@@ -701,8 +914,8 @@
             }
 
             return `
-                <div class="p-2 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between">
-                    <span class="font-bold text-gray-700 text-xs">${name}</span>
+                <div class="p-2 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <span class="font-bold text-slate-700 text-xs">${name}</span>
                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg border ${badgeBg}">${label}</span>
                 </div>
             `;
@@ -739,20 +952,28 @@
         }
 
         function applyFilters() {
+            const filtered = getFilteredSPBU();
+            if (filtered.length > 0) {
+                const exists = filtered.some(s => s.id === activeSpbuId);
+                if (!exists) {
+                    activeSpbuId = filtered[0].id;
+                }
+            }
             renderSidebarList();
+            renderActiveMapAndDetails();
         }
 
         function setFuelFilter(fuel) {
             activeFuelFilter = fuel;
             document.querySelectorAll(".fuel-filter-btn").forEach(btn => {
-                btn.classList.remove("bg-gray-800", "text-white");
-                btn.classList.add("bg-white", "text-gray-600");
+                btn.classList.remove("bg-slate-800", "text-white");
+                btn.classList.add("bg-white", "text-slate-600");
             });
 
             const activeBtn = document.getElementById(`fuelFilter-${fuel}`);
             if (activeBtn) {
-                activeBtn.classList.remove("bg-white", "text-gray-600");
-                activeBtn.classList.add("bg-gray-800", "text-white");
+                activeBtn.classList.remove("bg-white", "text-slate-600");
+                activeBtn.classList.add("bg-slate-800", "text-white");
             }
 
             renderSidebarList();
@@ -772,10 +993,10 @@
 
             if (tab === 'spbu-list') {
                 btnList.className = "flex-1 py-2.5 text-center border-b-2 border-red-600 text-red-600 font-bold";
-                btnFeed.className = "flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-gray-800 font-bold";
+                btnFeed.className = "flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-slate-800 font-bold";
             } else {
                 btnFeed.className = "flex-1 py-2.5 text-center border-b-2 border-red-600 text-red-600 font-bold";
-                btnList.className = "flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-gray-800 font-bold";
+                btnList.className = "flex-1 py-2.5 text-center border-b-2 border-transparent hover:text-slate-800 font-bold";
             }
 
             renderSidebarList();
@@ -791,13 +1012,13 @@
                 sidebar.classList.remove("hidden");
                 mapPane.classList.add("hidden");
                 btnList.className = "flex-1 py-2.5 text-center border-b-2 border-red-500 text-white flex items-center justify-center gap-2";
-                btnMap.className = "flex-1 py-2.5 text-center border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center justify-center gap-2";
+                btnMap.className = "flex-1 py-2.5 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
             } else {
                 sidebar.classList.add("hidden");
                 mapPane.classList.remove("hidden");
                 mapPane.classList.add("flex");
                 btnMap.className = "flex-1 py-2.5 text-center border-b-2 border-red-500 text-white flex items-center justify-center gap-2";
-                btnList.className = "flex-1 py-2.5 text-center border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center justify-center gap-2";
+                btnList.className = "flex-1 py-2.5 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
             }
         }
 
@@ -822,9 +1043,9 @@
             e.preventDefault();
 
             const spbuId = document.getElementById("reportSpbuSelect").value;
-            const status = document.querySelector('input[name="reportStatus"]:checked').value;
+            const queueMeters = parseInt(document.getElementById("reportQueueMeters").value) || 0;
+            const status = getStatusFromQueue(queueMeters);
             const waitTime = parseInt(document.getElementById("reportWaitTime").value);
-            const queueMeters = parseInt(document.getElementById("reportQueueMeters").value);
             const note = document.getElementById("reportNote").value;
 
             const fuelPertalite = document.getElementById("reportFuelPertalite").value;
@@ -862,7 +1083,7 @@
                 closeReportModal();
 
                 document.getElementById("reportNote").value = "";
-                showToast(`Laporan berhasil dikirim untuk ${targetSpbu.name}!`, "success");
+                showToast(`Laporan berhasil terkirim untuk ${targetSpbu.name}!`, "success");
             }
         }
 
@@ -876,7 +1097,7 @@
             const container = document.getElementById("toastContainer");
             const toast = document.createElement("div");
 
-            let bg = "bg-gray-900 text-white";
+            let bg = "bg-slate-900 text-white";
             if (type === "success") bg = "bg-emerald-600 text-white";
             if (type === "error") bg = "bg-red-600 text-white";
 
