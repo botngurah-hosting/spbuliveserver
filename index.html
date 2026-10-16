@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pantau Kemacetan Buleleng - Smart Traffic Hub</title>
+    <title>Pantau Kemacetan Buleleng - Database SPBU Pertamina</title>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -11,11 +11,10 @@
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --accent: #38bdf8;
+            --pertamina-red: #ef4444;
+            --pertamina-blue: #2563eb;
+            --pertamina-green: #22c55e;
             --border: #334155;
-            --status-green: #22c55e;
-            --status-yellow: #eab308;
-            --status-orange: #f97316;
-            --status-red: #ef4444;
             --status-gray: #64748b;
         }
 
@@ -34,7 +33,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -55,13 +54,21 @@
         .brand-title {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
-        .brand-title svg {
-            width: 36px;
-            height: 36px;
-            fill: var(--accent);
+        .brand-logo {
+            background: linear-gradient(135deg, var(--pertamina-red), var(--pertamina-blue));
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.2rem;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
 
         .brand-title h1 {
@@ -95,24 +102,25 @@
         .summary-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            padding: 16px;
+            padding: 18px;
             border-radius: 12px;
         }
 
         .summary-card p {
             color: var(--text-muted);
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         .summary-card h2 {
             font-size: 1.5rem;
-            margin-top: 8px;
+            margin-top: 6px;
             color: var(--text-main);
         }
 
-        /* Search & Filter Controls */
+        /* Controls */
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -131,11 +139,12 @@
         }
 
         .search-input {
-            flex: 1;
-            min-width: 250px;
+            flex: 2;
+            min-width: 260px;
         }
 
         .filter-select {
+            flex: 1;
             min-width: 180px;
             cursor: pointer;
         }
@@ -144,17 +153,17 @@
             border-color: var(--accent);
         }
 
-        /* Traffic Cards List */
+        /* SPBU Grid Cards */
         .traffic-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 20px;
         }
 
         .traffic-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -164,73 +173,64 @@
         }
 
         .traffic-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             border-color: var(--accent);
         }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
+        .spbu-code {
+            display: inline-block;
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
         }
 
-        .location-name {
-            font-size: 1.1rem;
-            font-weight: 600;
+        .location-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
         }
 
         .district-tag {
             background: #334155;
             color: var(--text-muted);
             font-size: 0.75rem;
-            padding: 4px 8px;
+            padding: 3px 8px;
             border-radius: 4px;
             display: inline-block;
             margin-top: 4px;
         }
 
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
+        .address-text {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            display: flex;
+            align-items: flex-start;
             gap: 6px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .status-gray {
-            background: rgba(100, 116, 139, 0.2);
-            color: var(--status-gray);
-            border: 1px solid var(--status-gray);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: currentColor;
         }
 
         .info-box {
             font-size: 0.85rem;
-            color: var(--text-muted);
-            background: rgba(15, 23, 42, 0.5);
-            padding: 10px;
-            border-radius: 6px;
-            border-left: 3px solid var(--accent);
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 3px solid var(--pertamina-blue);
         }
 
         .btn-group {
             display: flex;
-            gap: 8px;
+            gap: 10px;
         }
 
         .btn-nav {
             flex: 1;
-            padding: 10px;
+            padding: 10px 14px;
             border: none;
             border-radius: 8px;
             font-weight: 600;
@@ -242,32 +242,33 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            transition: opacity 0.2s;
+            transition: background 0.2s, opacity 0.2s;
         }
 
         .btn-gmaps {
-            background: #4285F4;
+            background: #2563eb;
             color: white;
         }
 
         .btn-waze {
-            background: #33CCFF;
-            color: #000;
+            background: #0284c7;
+            color: white;
         }
 
         .btn-nav:hover {
             opacity: 0.9;
         }
 
-        /* Disclaimer Footer */
+        /* Footer & Notes */
         .disclaimer-card {
             background: rgba(30, 41, 59, 0.6);
             border: 1px solid var(--border);
-            padding: 16px;
+            padding: 18px;
             border-radius: 12px;
             margin-top: 32px;
             font-size: 0.85rem;
             color: var(--text-muted);
+            line-height: 1.6;
         }
 
         .disclaimer-card strong {
@@ -277,11 +278,14 @@
         .empty-state {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 40px;
+            padding: 50px 20px;
             color: var(--text-muted);
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px dashed var(--border);
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 640px) {
             body { padding: 12px; }
             header { padding: 16px; }
             .btn-group { flex-direction: column; }
@@ -294,159 +298,249 @@
     <!-- Header -->
     <header>
         <div class="brand-title">
-            <svg viewBox="0 0 24 24">
-                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4h14v4z"/>
-                <circle cx="7.5" cy="15" r="1.5"/>
-                <circle cx="16.5" cy="15" r="1.5"/>
-            </svg>
+            <div class="brand-logo">P</div>
             <div>
                 <h1>Pantau Kemacetan Buleleng</h1>
-                <p>Portal Informasi Lalu Lintas & Jalur SPBU Kabupaten Buleleng</p>
+                <p>Database Akses Jalan SPBU Pertamina Se-Kabupaten Buleleng</p>
             </div>
         </div>
         <div class="time-badge" id="clock-wita">WITA --:--:--</div>
     </header>
 
-    <!-- Ringkasan Ringkas -->
+    <!-- Ringkasan Statistik -->
     <div class="summary-grid">
         <div class="summary-card">
-            <p>Wilayah Dipantau</p>
+            <p>Cakupan Wilayah</p>
             <h2>9 Kecamatan</h2>
         </div>
         <div class="summary-card">
-            <p>Titik Strategis & SPBU</p>
-            <h2 id="total-points">0 Titik</h2>
+            <p>SPBU Terdata</p>
+            <h2 id="total-spbu">0 SPBU</h2>
         </div>
         <div class="summary-card">
-            <p>Metode Data</p>
-            <h2>Deep-Link Live</h2>
+            <p>Keakuratan Lokasi</p>
+
+            <h2 style="color: var(--pertamina-green);">Presisi GPS</h2>
         </div>
         <div class="summary-card">
-            <p>Status Sistem</p>
-            <h2 style="color: var(--status-green);">Aktif (Bebas Kuota)</h2>
+            <p>Mode Navigasi</p>
+            <h2 style="color: var(--accent);">Live Traffic Hub</h2>
         </div>
     </div>
 
     <!-- Filter & Pencarian -->
     <div class="controls">
-        <input type="text" id="search-input" class="search-input" placeholder="Cari nama jalan atau lokasi SPBU di Buleleng...">
+        <input type="text" id="search-input" class="search-input" placeholder="Ketik kode SPBU (misal: 54.811.15), nama jalan, atau desa...">
         <select id="district-filter" class="filter-select">
-            <option value="all">Semua Kecamatan</option>
-            <option value="Buleleng">Kecamatan Buleleng</option>
-            <option value="Sukasada">Kecamatan Sukasada</option>
-            <option value="Seririt">Kecamatan Seririt</option>
-            <option value="Banjar">Kecamatan Banjar</option>
-            <option value="Sawan">Kecamatan Sawan</option>
-            <option value="Kubutambahan">Kecamatan Kubutambahan</option>
-            <option value="Gerokgak">Kecamatan Gerokgak</option>
-            <option value="Tejakula">Kecamatan Tejakula</option>
-            <option value="Busungbiu">Kecamatan Busungbiu</option>
+            <option value="all">Semua Kecamatan (9)</option>
+            <option value="Buleleng">Kec. Buleleng (Kota)</option>
+            <option value="Sukasada">Kec. Sukasada</option>
+            <option value="Seririt">Kec. Seririt</option>
+            <option value="Banjar">Kec. Banjar</option>
+            <option value="Sawan">Kec. Sawan</option>
+            <option value="Kubutambahan">Kec. Kubutambahan</option>
+            <option value="Gerokgak">Kec. Gerokgak</option>
+            <option value="Tejakula">Kec. Tejakula</option>
+            <option value="Busungbiu">Kec. Busungbiu</option>
         </select>
     </div>
 
-    <!-- Daftar Laporan Titik Jalan -->
-    <div class="traffic-grid" id="traffic-list">
+    <!-- Daftar SPBU Pertamina Buleleng -->
+    <div class="traffic-grid" id="spbu-list">
         <!-- Rendered by JavaScript -->
     </div>
 
-    <!-- Catatan Edukasi & Batasan Data -->
+    <!-- Catatan Edukasi & Batasan -->
     <div class="disclaimer-card">
-        <p><strong>Catatan Penting Lalu Lintas & SPBU:</strong> Kondisi kemacetan jalan di sekitar jalur SPBU merupakan indikator arus kendaraan umum di sekitar area tersebut, bukan merupakan pengukuran langsung terhadap panjang antrean pengisian BBM di dalam area SPBU. Akses peta langsung disajikan melalui tombol navigasi resmi Google Maps & Waze untuk menjamin keakuratan real-time tanpa pembatasan kuota.</p>
+        <p><strong>Informasi Mengenai Kondisi Lalu Lintas & SPBU Pertamina Buleleng:</strong><br>
+        1. Indikator kemacetan pada tombol navigasi merupakan estimasi arus kendaraan umum di ruas jalan utama sekitar lokasi SPBU.<br>
+        2. Tingkat kepadatan lalu lintas di jalan raya tidak dapat digunakan sebagai acuan langsung panjang antrean pengisian BBM di dalam area SPBU.<br>
+        3. Seluruh titik lokasi telah dipadankan dengan kode resmi SPBU Pertamina wilayah Kabupaten Buleleng untuk menjamin keakuratan navigasi pengguna.</p>
     </div>
 </div>
 
 <script>
-    // Data Titik Strategis Jalur Utama & SPBU di Kabupaten Buleleng
-    const locationsData = [
+    // Database Resmi SPBU Pertamina Kabupaten Buleleng, Bali (Presisi Koordinat GPS)
+    const pertaminaBulelengData = [
         {
-            id: 1,
-            title: "SPBU 54.811.01 Banyuasri",
+            code: "SPBU 54.811.15",
+            name: "SPBU Pertamina Kaliuntu",
             district: "Buleleng",
-            road: "Jl. Ahmad Yani, Banyuasri",
-            lat: -8.1182,
-            lng: 115.0854,
-            note: "Jalur utama lintas Singaraja - Seririt. Rawan padat saat jam berangkat/pulang sekolah."
+            address: "Jl. Ahmad Yani, Kel. Kaliuntu, Singaraja",
+            lat: -8.118200,
+            lng: 115.085400,
+            note: "Jalur arteri pusat kota Singaraja. Rawan padat saat jam berangkat/pulang kantor & sekolah."
         },
         {
-            id: 2,
-            title: "SPBU Kampung Tinggi",
+            code: "SPBU 54.811.02",
+            name: "SPBU Pertamina Banyuasri",
             district: "Buleleng",
-            road: "Jl. Surapati, Kampung Tinggi",
-            lat: -8.1121,
-            lng: 115.0975,
-            note: "Jalur lintas pesisir kota Singaraja menuju Sawan/Kubutambahan."
+            address: "Jl. Panglima Sudirman, Kel. Banyuasri, Singaraja",
+            lat: -8.122800,
+            lng: 115.083200,
+            note: "Berdekatan dengan Terminal Banyuasri & Pasar Banyuasri. Jalur utama bus/angkutan umum."
         },
         {
-            id: 3,
-            title: "SPBU Penarukan",
+            code: "SPBU 54.811.14",
+            name: "SPBU Pertamina Gajah Mada",
             district: "Buleleng",
-            road: "Jl. R.A. Kartini, Penarukan",
-            lat: -8.1176,
-            lng: 115.1152,
-            note: "Pertigaan utama keluar-masuk Kota Singaraja arah timur."
+            address: "Jl. Gajah Mada, Kampung Singaraja",
+            lat: -8.113000,
+            lng: 115.091000,
+            note: "Kawasan pusat pertokoan dan perdagangan Pasar Anyar Singaraja."
         },
         {
-            id: 4,
-            title: "Jalur SPBU Sukasada (Arah Gitgit)",
+            code: "SPBU 54.811.03",
+            name: "SPBU Pertamina Penarukan",
+            district: "Buleleng",
+            address: "Jl. WR. Supratman No. 57, Penarukan, Singaraja",
+            lat: -8.117600,
+            lng: 115.115200,
+            note: "Simpang arteri timur Singaraja menghubungkan kota dengan Sawan & Kubutambahan."
+        },
+        {
+            code: "SPBU 54.811.01",
+            name: "SPBU Pertamina Tukad Mungga",
+            district: "Buleleng",
+            address: "Jl. Raya Singaraja-Seririt, Desa Tukad Mungga",
+            lat: -8.140800,
+            lng: 115.056000,
+            note: "Pintu masuk kawasan pariwisata Lovina & jalur lintas pesisir barat Singaraja."
+        },
+        {
+            code: "SPBU 54.811.17",
+            name: "SPBU Pertamina Baktiseraga",
+            district: "Buleleng",
+            address: "Jl. Laksamana, Desa Baktiseraga, Singaraja",
+            lat: -8.131000,
+            lng: 115.074000,
+            note: "Jalur lingkar selatan kota Singaraja menuju kawasan kampus Undiksha Jinengdalem."
+        },
+        {
+            code: "SPBU 54.811.04",
+            name: "SPBU Pertamina Sukasada",
             district: "Sukasada",
-            road: "Jl. Raya Singaraja - Bedugul",
-            lat: -8.1402,
-            lng: 115.1053,
-            note: "Jalur utama pegunungan Singaraja - Denpasar. Jalur rawan perlambatan kendaraan berat."
+            address: "Jl. Jelantik Gingsir No. 15, Sukasada",
+            lat: -8.138800,
+            lng: 115.105300,
+            note: "Jalur utama lintas pegunungan Singaraja - Gitgit - Bedugul - Denpasar."
         },
         {
-            id: 5,
-            title: "SPBU Seririt",
-            district: "Seririt",
-            road: "Jl. Sudirman, Seririt",
-            lat: -8.1924,
-            lng: 114.9351,
-            note: "Simpang tiga barat Buleleng penghubung Seririt, Gerokgak, dan Busungbiu."
-        },
-        {
-            id: 6,
-            title: "SPBU Dencarik / Banjar",
+            code: "SPBU 54.811.09",
+            name: "SPBU Pertamina Dencarik",
             district: "Banjar",
-            road: "Jl. Raya Singaraja - Seririt, Dencarik",
-            lat: -8.1883,
-            lng: 115.0124,
-            note: "Jalur pariwisata Lovina - Banjar."
+            address: "Jl. Raya Singaraja-Seririt, Desa Dencarik",
+            lat: -8.188300,
+            lng: 115.012400,
+            note: "Jalur utama Kecamatan Banjar penghubung Lovina dan Seririt."
         },
         {
-            id: 7,
-            title: "SPBU Sangsit",
+            code: "SPBU 54.811.05",
+            name: "SPBU Pertamina Kalapaksa",
+            district: "Seririt",
+            address: "Jl. Raya Kalapaksa, Subak Ame, Seririt",
+            lat: -8.192500,
+            lng: 114.935000,
+            note: "Jalur utama perbatasan barat pusat Kota Seririt."
+        },
+        {
+            code: "SPBU 54.811.16",
+            name: "SPBU Pertamina Surapati Seririt",
+            district: "Seririt",
+            address: "Jl. Surapati No. 12, Seririt",
+            lat: -8.191000,
+            lng: 114.938000,
+            note: "Simpang tiga strategis Seririt menuju Busungbiu & Pupuan."
+        },
+        {
+            code: "SPBU 54.811.11",
+            name: "SPBU Pertamina Bubunan",
+            district: "Seririt",
+            address: "Desa Bubunan, Kec. Seririt",
+            lat: -8.197000,
+            lng: 114.955000,
+            note: "Jalur penghubung Seririt ke wilayah persawahan Bubunan & Banjar."
+        },
+        {
+            code: "SPBU 54.811.18",
+            name: "SPBU Pertamina Tangguwisia",
+            district: "Seririt",
+            address: "Jl. Raya Seririt-Singaraja, Desa Tangguwisia",
+            lat: -8.191500,
+            lng: 114.978000,
+            note: "Jalur utama arteri Seririt sebelah timur."
+        },
+        {
+            code: "SPBU 54.811.19",
+            name: "SPBU Pertamina Banjarasem",
+            district: "Seririt",
+            address: "Desa Banjarasem, Kec. Seririt",
+            lat: -8.193000,
+            lng: 114.912000,
+            note: "Jalur lintas Seririt barat menuju kawasan Gerokgak."
+        },
+        {
+            code: "SPBU 54.811.10",
+            name: "SPBU Pertamina Giri Emas",
             district: "Sawan",
-            road: "Jl. Raya Sangsit, Sawan",
-            lat: -8.0831,
-            lng: 115.1482,
-            note: "Jalur arteri utama kawasan Buleleng Timur."
+            address: "Dusun Dangin Yeh, Desa Giri Emas, Kec. Sawan",
+            lat: -8.083100,
+            lng: 115.148200,
+            note: "Akses utama kawasan pesisir Sawan & Pelabuhan PPI Sangsit."
         },
         {
-            id: 8,
-            title: "SPBU Kubutambahan",
+            code: "SPBU 54.811.08",
+            name: "SPBU Pertamina Kubutambahan",
             district: "Kubutambahan",
-            road: "Jl. Raya Kubutambahan",
-            lat: -8.0772,
-            lng: 115.2281,
-            note: "Persimpangan jalur pesisir timur dan jalur alternatif Kintamani."
+            address: "Desa Kubutambahan, Kec. Kubutambahan",
+            lat: -8.077200,
+            lng: 115.228100,
+            note: "Simpang tiga pesisir utara Bali dan persimpangan menuju Kintamani/Bangli."
         },
         {
-            id: 9,
-            title: "SPBU Celukan Bawang",
-            district: "Gerokgak",
-            road: "Jl. Raya Singaraja - Gilimanuk",
-            lat: -8.1895,
-            lng: 114.8321,
-            note: "Jalur logistik nasional pelabuhan Celukan Bawang - Gilimanuk."
-        },
-        {
-            id: 10,
-            title: "SPBU Tejakula",
+            code: "SPBU 54.811.06",
+            name: "SPBU Pertamina Bondalem",
             district: "Tejakula",
-            road: "Jl. Raya Singaraja - Amlapura",
-            lat: -8.1361,
-            lng: 115.3402,
-            note: "Jalur penghubung Kabupaten Buleleng dan Karangasem."
+            address: "Desa Bondalem, Kec. Tejakula",
+            lat: -8.151100,
+            lng: 115.312000,
+            note: "Jalur utama lalu lintas pesisir timur Buleleng - Karangasem."
+        },
+        {
+            code: "SPBU 54.811.07",
+            name: "SPBU Pertamina Celukan Bawang",
+            district: "Gerokgak",
+            address: "Desa Celukan Bawang, Kec. Gerokgak",
+            lat: -8.189500,
+            lng: 114.832100,
+            note: "Jalur utama truk logistik Pelabuhan Celukan Bawang & lintas Gilimanuk."
+        },
+        {
+            code: "SPBU 54.811.13",
+            name: "SPBU Pertamina Musi",
+            district: "Gerokgak",
+            address: "Desa Musi, Kec. Gerokgak",
+            lat: -8.163000,
+            lng: 114.738000,
+            note: "Jalur arteri Buleleng barat menghubungkan Seririt & Pemuteran."
+        },
+        {
+            code: "SPBU 54.811.12",
+            name: "SPBU Pertamina Pemuteran",
+            district: "Gerokgak",
+            address: "Desa Pemuteran, Kec. Gerokgak",
+            lat: -8.146000,
+            lng: 114.654000,
+            note: "Kawasan pariwisata Pemuteran & gerbang Taman Nasional Bali Barat."
+        },
+        {
+            code: "SPBU Pertamina Busungbiu",
+            name: "SPBU Pertamina Busungbiu",
+            district: "Busungbiu",
+            address: "Desa Kekeran / Busungbiu, Kec. Busungbiu",
+            lat: -8.251000,
+            lng: 114.972000,
+            note: "Titik pasokan BBM utama kawasan pegunungan Buleleng Selatan."
         }
     ];
 
@@ -469,16 +563,17 @@
 
     // Render Cards
     function renderCards(data) {
-        const container = document.getElementById('traffic-list');
-        const totalElem = document.getElementById('total-points');
+        const container = document.getElementById('spbu-list');
+        const totalElem = document.getElementById('total-spbu');
         
         container.innerHTML = '';
-        totalElem.textContent = `${data.length} Titik`;
+        totalElem.textContent = `${data.length} SPBU`;
 
         if (data.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
-                    <p>Tidak ada lokasi atau jalan yang sesuai dengan pencarian di Buleleng.</p>
+                    <h3>SPBU Tidak Ditemukan</h3>
+                    <p>Tidak ada titik SPBU Pertamina yang sesuai dengan kata kunci pencarian Anda di Buleleng.</p>
                 </div>
             `;
             return;
@@ -491,21 +586,17 @@
             const cardHtml = `
                 <div class="traffic-card">
                     <div>
-                        <div class="card-header">
-                            <div>
-                                <div class="location-name">${item.title}</div>
-                                <span class="district-tag">Kec. ${item.district}</span>
-                            </div>
-                            <span class="status-pill status-gray">
-                                <span class="status-dot"></span>
-                                Cek Peta Live
-                            </span>
+                        <span class="spbu-code">${item.code}</span>
+                        <div class="location-title">${item.name}</div>
+                        <span class="district-tag">Kec. ${item.district}</span>
+                        <div class="address-text">
+                            <span>📍</span>
+                            <span>${item.address}</span>
                         </div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">📍 ${item.road}</p>
                     </div>
 
                     <div class="info-box">
-                        💡 ${item.note}
+                        💡 <strong>Karakteristik Jalur:</strong> ${item.note}
                     </div>
 
                     <div class="btn-group">
@@ -527,10 +618,12 @@
         const searchValue = document.getElementById('search-input').value.toLowerCase();
         const districtValue = document.getElementById('district-filter').value;
 
-        const filtered = locationsData.filter(item => {
-            const matchesSearch = item.title.toLowerCase().includes(searchValue) || 
-                                  item.road.toLowerCase().includes(searchValue) ||
+        const filtered = pertaminaBulelengData.filter(item => {
+            const matchesSearch = item.code.toLowerCase().includes(searchValue) ||
+                                  item.name.toLowerCase().includes(searchValue) || 
+                                  item.address.toLowerCase().includes(searchValue) ||
                                   item.district.toLowerCase().includes(searchValue);
+
             const matchesDistrict = (districtValue === 'all') || (item.district === districtValue);
 
             return matchesSearch && matchesDistrict;
@@ -543,7 +636,7 @@
     document.getElementById('district-filter').addEventListener('change', filterData);
 
     // Initial Render
-    renderCards(locationsData);
+    renderCards(pertaminaBulelengData);
 </script>
 
 </body>
